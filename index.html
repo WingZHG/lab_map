@@ -1,0 +1,141 @@
+<html>
+<head>
+  <title>Barrett lab map demo</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="./dist/leaflet-panel-layers.src.css" />
+<script src="./dist/leaflet-panel-layers.src.js"></script>
+<link rel="stylesheet" href="icons.css" />
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="./dist/oms.min.js"></script>
+
+
+
+  <style>
+    #map{ height: 100%}
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script
+			  src="https://code.jquery.com/jquery-3.4.1.min.js"
+			  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+			  crossorigin="anonymous"></script>
+
+<script>
+
+L.Map = L.Map.extend({
+    openPopup: function(popup) {
+        this._popup = popup;
+        return this.addLayer(popup).fire('popupopen', {
+            popup: this._popup
+        });
+    }
+});
+
+
+
+var map = L.map('map', {
+    crs: L.CRS.Simple,
+	maxZoom: 0.25,
+    minZoom: -1.55
+	});
+
+		var bounds = [[0,0], [2294, 1502]];
+		var image = L.imageOverlay('./lab_map.png', bounds).addTo(map);
+	
+	
+	osmLayer = new L.TileLayer('');
+
+map.addLayer(osmLayer);
+
+function forEachFeature(feature, layer) {
+		var popupContent = "<p> <b>" + feature.properties.id + 
+			"</b></br>"+ "Location: " + feature.properties.location +
+			"</br>"+ "Notes: " + feature.properties.notes + "</p>";
+
+		layer.bindPopup(popupContent);
+	}
+
+
+
+var oms = new OverlappingMarkerSpiderfier(map); // Initialize OverlappingMarkerSpiderfier with your map
+oms.addListener('spiderfy', function(markers) {
+  map.openPopup();
+});
+
+fetch('https://script.google.com/macros/s/AKfycbzQKn2Dfo6c58SAOS0G5E2Z6p8Ro7Ds7aZXFx0l2m5sbqOzb65VrXr9UI82JbZRcdYM/exec')
+.then(response => response.json())
+  .then(data => {
+    // Initialize a structure to hold layers for each group
+    var groupLayers = {};
+	var baseLayers = [
+  // Pre-existing layers or groups can be defined here
+];
+    // Process each item and organize by group and type
+    data.forEach(item => {
+      const latitude = parseFloat(item.latitude);
+      const longitude = parseFloat(item.longtitude);
+
+      if (!isNaN(latitude) && !isNaN(longitude)) {
+        // Initialize group if it doesn't exist
+        if (!groupLayers[item.group]) {
+          groupLayers[item.group] = {};
+        }
+
+        // Initialize type layer group within the group if it doesn't exist
+        if (!groupLayers[item.group][item.type]) {
+          groupLayers[item.group][item.type] = L.layerGroup();
+        }
+
+        // Create a marker for each item
+        var itemMarker = L.marker([latitude, longitude])
+                          .bindPopup(`<font size="4"><b>${item.item}</b></font><br><br><b>Location:</b> ${item.location}<br><b>Notes:</b> ${item.notes}`);
+
+                          oms.addMarker(itemMarker);
+
+        // Add the marker to the corresponding type layer group
+        groupLayers[item.group][item.type].addLayer(itemMarker);
+      }
+    });
+
+    // Add each group with its types to baseLayers
+    Object.keys(groupLayers).forEach(groupName => {
+      var groupLayerEntries = Object.keys(groupLayers[groupName]).map(typeName => {
+        return {
+          name: typeName,
+          icon: '<i class=""></i>',
+          layer: groupLayers[groupName][typeName]
+        };
+      });
+
+      baseLayers.push({
+        group: groupName,
+        layers: groupLayerEntries
+      });
+	});
+
+	map.fitBounds(bounds);
+
+var overLayers = [
+
+	
+];
+
+var panelLayers = new L.Control.PanelLayers(baseLayers, overLayers, {
+	compact: true,
+	//collapsed: true,
+	collapsibleGroups: true
+});
+
+map.addControl(panelLayers);
+
+});
+	
+
+</script>
+</body>
+</html>
