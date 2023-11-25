@@ -41,10 +41,10 @@ L.Map = L.Map.extend({
 var map = L.map('map', {
     crs: L.CRS.Simple,
 	maxZoom: 0.25,
-    minZoom: -1.55
+  minZoom: -1.35
 	});
 
-		var bounds = [[0,0], [2294, 1502]];
+		var bounds = [[0,0], [4113, 1483]];
 		var image = L.imageOverlay('./lab_map.png', bounds).addTo(map);
 	
 	
@@ -132,6 +132,7 @@ var panelLayers = new L.Control.PanelLayers(baseLayers, overLayers, {
 });
 
 map.addControl(panelLayers);
+map.setView([3200, 741.5]);
 
 });
 	
