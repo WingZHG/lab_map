@@ -36,12 +36,15 @@ L.Map = L.Map.extend({
     }
 });
 
-
+var southWest = L.latLng(4413, 1783),
+    northEast = L.latLng(-300, -300),
+    bounds = L.latLngBounds(southWest, northEast);
 
 var map = L.map('map', {
     crs: L.CRS.Simple,
 	maxZoom: 0.25,
-  minZoom: -1.35
+  minZoom: -1.35,
+  maxBounds: bounds,
 	});
 
 		var bounds = [[0,0], [4113, 1483]];
