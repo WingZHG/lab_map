@@ -9,7 +9,10 @@
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script src="./dist/oms.min.js"></script>
-
+<link rel="stylesheet" href="./dist/leaflet-search.css" />
+<link rel="stylesheet" href="./dist/leaflet-search.mobile.css" />
+<script src="./dist/leaflet-search.js"></script>
+<script src="./dist/leaflet-search-geocoder.js"></script>
 
 
   <style>
@@ -70,6 +73,9 @@ oms.addListener('spiderfy', function(markers) {
   map.openPopup();
 });
 
+var allMarkersLayer = L.layerGroup();
+var markersMap = {};  // Object to keep track of markers by some identifier
+
 fetch('https://script.google.com/macros/s/AKfycbzQKn2Dfo6c58SAOS0G5E2Z6p8Ro7Ds7aZXFx0l2m5sbqOzb65VrXr9UI82JbZRcdYM/exec')
 .then(response => response.json())
   .then(data => {
@@ -95,15 +101,24 @@ fetch('https://script.google.com/macros/s/AKfycbzQKn2Dfo6c58SAOS0G5E2Z6p8Ro7Ds7a
         }
 
         // Create a marker for each item
-        var itemMarker = L.marker([latitude, longitude])
+        var itemMarker = L.marker([latitude, longitude], { title: item.item })
                           .bindPopup(`<font size="4"><b>${item.item}</b></font><br><br><b>Location:</b> ${item.location}<br><b>Notes:</b> ${item.notes}`);
 
                           oms.addMarker(itemMarker);
 
+        var itemMarker_s = L.marker([latitude, longitude], { title: item.item , opacity: 0 })
+        .bindPopup(`<font size="4"><b>${item.item}</b></font><br><br><b>Location:</b> ${item.location}<br><b>Notes:</b> ${item.notes}`);
+
+        oms.addMarker(itemMarker);
+
         // Add the marker to the corresponding type layer group
         groupLayers[item.group][item.type].addLayer(itemMarker);
+        allMarkersLayer.addLayer(itemMarker_s);
+        markersMap[item.item] = itemMarker_s;  // Store marker with item as key
       }
     });
+
+
 
     // Add each group with its types to baseLayers
     Object.keys(groupLayers).forEach(groupName => {
@@ -119,7 +134,10 @@ fetch('https://script.google.com/macros/s/AKfycbzQKn2Dfo6c58SAOS0G5E2Z6p8Ro7Ds7a
         group: groupName,
         layers: groupLayerEntries
       });
+    
 	});
+
+
 
 	map.fitBounds(bounds);
 
@@ -134,9 +152,34 @@ var panelLayers = new L.Control.PanelLayers(baseLayers, overLayers, {
 	collapsibleGroups: true
 });
 
+ var searchControl = new L.Control.Search({
+     layer: allMarkersLayer,  // Search within these markers
+     propertyName: 'title',  // Assuming you want to search by the 'item' property
+     marker: false,
+     initial: false,
+     firstTipSubmit: true,
+     moveToLocation: function(latlng, title, map) {
+         map.setView(latlng, -0.52);  // Zoom level after selecting the marker
+         for (var key in markersMap) {
+            var marker = markersMap[key];
+            if (key === title) {
+                marker.setOpacity(1);  // Make the marker visible
+                marker.addTo(map);     // Add to map if not already there
+            } else {
+                marker.setOpacity(0);  // Hide other markers
+                marker.removeFrom(map);
+            }
+        }
+     }
+ });
+
+ searchControl.on('search:locationfound', function(e) {
+     e.layer.openPopup();
+ });
+
 map.addControl(panelLayers);
 map.setView([3200, 741.5]);
-
+map.addControl(searchControl);
 });
 	
 
